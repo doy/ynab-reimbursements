@@ -1709,6 +1709,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "ynab-api"
 version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "reqwest 0.9.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.99 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1725,7 +1726,7 @@ dependencies = [
  "cursive_table_view 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "directories 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "snafu 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "ynab-api 1.0.0",
+ "ynab-api 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [metadata]
@@ -1925,3 +1926,4 @@ dependencies = [
 "checksum winreg 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "b2986deb581c4fe11b621998a5e53361efe6b48a151178d0cd9eeffa4dc6acc9"
 "checksum ws2_32-sys 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d59cefebd0c892fa2dd6de581e937301d8552cb44489cdff035c6187cb63fa5e"
 "checksum xi-unicode 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "12ea8eda4b1eb72f02d148402e23832d56a33f55d8c1b2d5bcdde91d79d47cb1"
+"checksum ynab-api 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "004581d786952ee09c3a4f1e2a2319eb51d992cb35bc3d4d068e9a46a224053b"

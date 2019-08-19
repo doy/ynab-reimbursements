@@ -10,4 +10,4 @@ cursive = "0.12"
 cursive_table_view = "0.10"
 directories = "2.0"
 snafu = "0.4"
-ynab-api = { path = "ynab-api" }
+ynab-api = "1.0"
