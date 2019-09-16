@@ -63,9 +63,7 @@ impl Budget {
         &self,
         txns: &[&super::transaction::Transaction],
     ) -> Result<()> {
-        let mut to_update =
-            ynab_api::models::UpdateTransactionsWrapper::new();
-        to_update.transactions = Some(
+        let to_update = ynab_api::models::UpdateTransactionsWrapper::new(
             txns.iter()
                 .map(|t| {
                     let mut ut = t.to_update_transaction();

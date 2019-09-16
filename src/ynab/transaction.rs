@@ -83,11 +83,11 @@ impl Transaction {
         &self,
     ) -> ynab_api::models::UpdateTransaction {
         let mut ut = ynab_api::models::UpdateTransaction::new(
+            self.id.clone(),
             self.account_id.clone(),
             self.date.clone(),
             self.amount,
         );
-        ut.id = Some(self.id.clone());
         ut.payee_id = self.payee_id.clone();
         ut.category_id = self.category_id.clone();
         ut.memo = self.memo.clone();
