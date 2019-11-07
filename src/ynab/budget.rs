@@ -67,7 +67,9 @@ impl Budget {
             txns.iter()
                 .map(|t| {
                     let mut ut = t.to_update_transaction();
-                    ut.flag_color = Some("green".to_string());
+                    ut.flag_color = Some(
+                        ynab_api::models::update_transaction::FlagColor::Green
+                    );
                     ut
                 })
                 .collect(),

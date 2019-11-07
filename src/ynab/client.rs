@@ -51,7 +51,7 @@ impl Client {
         Ok(self
             .api
             .budgets_api()
-            .get_budget_by_id(&budget_id, 0)
+            .get_budget_by_id(&budget_id, None)
             .map_err(|e| Error::GetBudgetById {
                 id: budget_id.clone(),
                 source_msg: format!("{:?}", e),
