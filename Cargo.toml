@@ -1,6 +1,6 @@
 [package]
 name = "ynab-reimbursements"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Jesse Luehrs <doy@tozt.net>"]
 edition = "2018"
 description = "ynab-reimbursements is a tool to help reconcile reimbursable transactions in YNAB"
