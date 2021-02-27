@@ -83,7 +83,7 @@ impl TxnTable {
                 v.set_selected_row(v.len() - 1);
                 None
             })
-            .with_id(id);
+            .with_name(id);
         TxnTable { view }
     }
 

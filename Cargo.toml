@@ -8,8 +8,8 @@ repository = "https://git.tozt.net/ynab-reimbursements"
 license = "MIT"
 
 [dependencies]
-cursive = "0.12"
-cursive_table_view = "0.10"
-directories = "2.0"
-snafu = "0.4"
+cursive = "0.16"
+cursive_table_view = "0.13"
+directories = "3.0"
+snafu = "0.6"
 ynab-api = "3"

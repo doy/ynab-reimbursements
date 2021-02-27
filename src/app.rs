@@ -1,3 +1,5 @@
+use cursive::CursiveExt as _;
+
 pub struct App {
     cursive: cursive::Cursive,
 }

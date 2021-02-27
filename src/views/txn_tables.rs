@@ -21,7 +21,7 @@ impl TxnTables {
         layout.add_child(
             cursive::views::TextView::new("Selected: $0.00 (0 transactions)")
                 .h_align(cursive::align::HAlign::Right)
-                .with_id(SELECTED_TOTAL_ID),
+                .with_name(SELECTED_TOTAL_ID),
         );
 
         let inflows = budget
@@ -39,9 +39,9 @@ impl TxnTables {
             if inflows_table.len() == 1 { ") " } else { "s)" }
         )));
         layout.add_child(cursive::views::CircularFocus::wrap_arrows(
-            cursive::views::BoxView::with_min_height(
+            cursive::views::ResizedView::with_min_height(
                 std::cmp::min(std::cmp::max(inflows_table.len(), 1), 5) + 2,
-                cursive::views::BoxView::with_full_width(inflows_table),
+                cursive::views::ResizedView::with_full_width(inflows_table),
             ),
         ));
 
@@ -66,7 +66,7 @@ impl TxnTables {
             }
         )));
         layout.add_child(cursive::views::CircularFocus::wrap_arrows(
-            cursive::views::BoxView::with_full_screen(outflows_table),
+            cursive::views::ResizedView::with_full_screen(outflows_table),
         ));
 
         let event_view = cursive::views::OnEventView::new(layout)
@@ -76,8 +76,8 @@ impl TxnTables {
             .on_event('r', move |s| {
                 refresh(s);
             })
-            .on_pre_event_inner(' ', |v, _| select(v))
-            .with_id(id);
+            .on_pre_event_inner(' ', |v, _| Some(select(v)))
+            .with_name(id);
 
         TxnTables { view: event_view }
     }
@@ -85,7 +85,7 @@ impl TxnTables {
 
 fn submit(s: &mut cursive::Cursive) {
     let inflows: Vec<_> = s
-        .call_on_id(
+        .call_on_name(
             INFLOWS_TABLE_ID,
             |v: &mut cursive::views::OnEventView<
                 super::txn_table::TxnTableView,
@@ -100,7 +100,7 @@ fn submit(s: &mut cursive::Cursive) {
         )
         .unwrap();
     let outflows: Vec<_> = s
-        .call_on_id(
+        .call_on_name(
             OUTFLOWS_TABLE_ID,
             |v: &mut cursive::views::OnEventView<
                 super::txn_table::TxnTableView,
@@ -128,7 +128,7 @@ fn submit(s: &mut cursive::Cursive) {
                 "Successfully updated {} transactions",
                 txns.len()
             )));
-            s.call_on_id(
+            s.call_on_name(
                 INFLOWS_TABLE_ID,
                 |v: &mut cursive::views::OnEventView<
                     super::txn_table::TxnTableView,
@@ -150,7 +150,7 @@ fn submit(s: &mut cursive::Cursive) {
                 },
             )
             .unwrap();
-            s.call_on_id(
+            s.call_on_name(
                 OUTFLOWS_TABLE_ID,
                 |v: &mut cursive::views::OnEventView<
                     super::txn_table::TxnTableView,
@@ -195,7 +195,7 @@ fn refresh(s: &mut cursive::Cursive) {
         .filter(|t| !t.reimbursed && t.amount > 0)
         .cloned()
         .collect();
-    s.call_on_id(
+    s.call_on_name(
         INFLOWS_TABLE_ID,
         |v: &mut cursive::views::OnEventView<
             super::txn_table::TxnTableView,
@@ -232,7 +232,7 @@ fn refresh(s: &mut cursive::Cursive) {
         .filter(|t| !t.reimbursed && t.amount <= 0)
         .cloned()
         .collect();
-    s.call_on_id(
+    s.call_on_name(
         OUTFLOWS_TABLE_ID,
         |v: &mut cursive::views::OnEventView<
             super::txn_table::TxnTableView,
@@ -267,35 +267,35 @@ fn refresh(s: &mut cursive::Cursive) {
 
 fn select(
     v: &mut cursive::views::LinearLayout,
-) -> Option<cursive::event::EventResult> {
+) -> cursive::event::EventResult {
     let idx = v.get_focus_index();
     let child = v.get_child_mut(idx).unwrap();
     child.call_on_any(
-        &cursive::view::Selector::Id(INFLOWS_TABLE_ID),
-        Box::new(|v| {
-            v.downcast_mut::<cursive::views::IdView<
+        &cursive::view::Selector::Name(INFLOWS_TABLE_ID),
+        &mut Box::new(|v: &mut (dyn View + 'static)| {
+            v.downcast_mut::<cursive::views::NamedView<
                 cursive::views::OnEventView<super::txn_table::TxnTableView>,
             >>()
             .map(|v| v.on_event(cursive::event::Event::Char(' ')));
         }),
     );
     child.call_on_any(
-        &cursive::view::Selector::Id(OUTFLOWS_TABLE_ID),
-        Box::new(|v| {
-            v.downcast_mut::<cursive::views::IdView<
+        &cursive::view::Selector::Name(OUTFLOWS_TABLE_ID),
+        &mut Box::new(|v: &mut (dyn View + 'static)| {
+            v.downcast_mut::<cursive::views::NamedView<
                 cursive::views::OnEventView<super::txn_table::TxnTableView>,
             >>()
             .map(|v| v.on_event(cursive::event::Event::Char(' ')));
         }),
     );
-    Some(cursive::event::EventResult::with_cb(|s| {
+    cursive::event::EventResult::with_cb(|s| {
         render_selected_total(s);
-    }))
+    })
 }
 
 fn render_selected_total(s: &mut cursive::Cursive) {
     let inflows: Vec<_> = s
-        .call_on_id(
+        .call_on_name(
             INFLOWS_TABLE_ID,
             |v: &mut cursive::views::OnEventView<
                 super::txn_table::TxnTableView,
@@ -310,7 +310,7 @@ fn render_selected_total(s: &mut cursive::Cursive) {
         )
         .unwrap();
     let outflows: Vec<_> = s
-        .call_on_id(
+        .call_on_name(
             OUTFLOWS_TABLE_ID,
             |v: &mut cursive::views::OnEventView<
                 super::txn_table::TxnTableView,
@@ -327,7 +327,7 @@ fn render_selected_total(s: &mut cursive::Cursive) {
     let outflow: i64 = outflows.iter().sum();
     let inflow: i64 = inflows.iter().sum();
     let amount = outflow + inflow;
-    s.call_on_id(SELECTED_TOTAL_ID, |v: &mut cursive::views::TextView| {
+    s.call_on_name(SELECTED_TOTAL_ID, |v: &mut cursive::views::TextView| {
         let mut sstr =
             cursive::utils::markup::StyledString::plain("Selected: ");
         let color = if amount == 0 && outflows.len() + inflows.len() != 0 {
