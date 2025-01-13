@@ -24,11 +24,11 @@ pub struct Budget {
 impl Budget {
     pub fn new(key: &str) -> Result<Self> {
         let client = super::client::Client::new(key);
-        let budget = client.default_budget().context(GetBudget)?;
+        let budget = client.default_budget().context(GetBudgetSnafu)?;
         let reimbursables = Self::get_reimbursables(&budget)?;
         let budget = Self {
             client,
-            id: budget.id.clone(),
+            id: budget.id.to_string(),
             name: budget.name.clone(),
             reimbursables,
         };
@@ -36,10 +36,9 @@ impl Budget {
         Ok(budget)
     }
 
-    #[must_use]
     pub fn refresh(&mut self) -> Result<()> {
-        let budget = self.client.default_budget().context(GetBudget)?;
-        self.id = budget.id.clone();
+        let budget = self.client.default_budget().context(GetBudgetSnafu)?;
+        self.id = budget.id.to_string();
         self.name = budget.name.clone();
         self.reimbursables = Self::get_reimbursables(&budget)?;
         self.check();
@@ -58,25 +57,24 @@ impl Budget {
         &self.reimbursables
     }
 
-    #[must_use]
     pub fn reconcile_transactions(
         &self,
         txns: &[&super::transaction::Transaction],
     ) -> Result<()> {
-        let to_update = ynab_api::models::UpdateTransactionsWrapper::new(
+        let to_update = ynab_api::models::PatchTransactionsWrapper::new(
             txns.iter()
                 .map(|t| {
-                    let mut ut = t.to_update_transaction();
-                    ut.flag_color = Some(
-                        ynab_api::models::update_transaction::FlagColor::Green
-                    );
+                    let mut ut = t.to_save_transaction();
+                    ut.flag_color = Some(Some(
+                        ynab_api::models::TransactionFlagColor::Green,
+                    ));
                     ut
                 })
                 .collect(),
         );
         self.client
             .update_transactions(&self.id, to_update)
-            .context(UpdateTransactions)?;
+            .context(UpdateTransactionsSnafu)?;
         Ok(())
     }
 
@@ -90,14 +88,14 @@ impl Budget {
                 categories
                     .iter()
                     .find(|c| c.name == "Reimbursables")
-                    .map(|c| c.id.clone())
+                    .map(|c| c.id)
             })
-            .context(FindReimbursablesCategory)?;
+            .context(FindReimbursablesCategorySnafu)?;
 
         let mut payee_map = std::collections::HashMap::new();
         if let Some(payees) = &budget.payees {
             for p in payees {
-                payee_map.insert(p.id.clone(), p.name.clone());
+                payee_map.insert(p.id, p.name.clone());
             }
         }
         let payee_map = payee_map;
@@ -105,7 +103,7 @@ impl Budget {
         let mut account_map = std::collections::HashMap::new();
         if let Some(accounts) = &budget.accounts {
             for a in accounts {
-                account_map.insert(a.id.clone(), a.name.clone());
+                account_map.insert(a.id, a.name.clone());
             }
         }
         let account_map = account_map;
@@ -117,7 +115,7 @@ impl Budget {
             for t in transactions {
                 transaction_map.insert(t.id.clone(), t);
 
-                if let Some(category_id) = &t.category_id {
+                if let Some(Some(category_id)) = &t.category_id {
                     if category_id != &reimbursables_id {
                         continue;
                     }
@@ -127,6 +125,7 @@ impl Budget {
 
                 let payee = t
                     .payee_id
+                    .flatten()
                     .iter()
                     .map(|payee_id| payee_map.get(payee_id).cloned())
                     .next()
@@ -144,7 +143,7 @@ impl Budget {
 
         if let Some(subtransactions) = &budget.subtransactions {
             for st in subtransactions {
-                if let Some(category_id) = &st.category_id {
+                if let Some(Some(category_id)) = &st.category_id {
                     if category_id != &reimbursables_id {
                         continue;
                     }
@@ -155,11 +154,13 @@ impl Budget {
                 let t = transaction_map[&st.transaction_id];
                 let payee = st
                     .payee_id
+                    .flatten()
                     .iter()
                     .map(|payee_id| payee_map.get(payee_id).cloned())
                     .next()
                     .unwrap_or_else(|| {
                         t.payee_id
+                            .flatten()
                             .iter()
                             .map(|payee_id| payee_map.get(payee_id).cloned())
                             .next()

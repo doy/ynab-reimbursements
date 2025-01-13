@@ -1,15 +1,15 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Transaction {
     pub id: String,
     pub date: String,
     pub amount: i64,
     pub memo: Option<String>,
-    pub cleared: ynab_api::models::transaction_summary::Cleared,
+    pub cleared: ynab_api::models::TransactionClearedStatus,
     pub approved: bool,
-    pub flag_color: Option<ynab_api::models::transaction_summary::FlagColor>,
-    pub account_id: String,
-    pub payee_id: Option<String>,
-    pub category_id: Option<String>,
+    pub flag_color: Option<ynab_api::models::TransactionFlagColor>,
+    pub account_id: uuid::Uuid,
+    pub payee_id: Option<uuid::Uuid>,
+    pub category_id: Option<uuid::Uuid>,
     pub import_id: Option<String>,
 
     pub account: Option<String>,
@@ -23,8 +23,8 @@ impl Transaction {
     pub fn from_transaction(
         t: &ynab_api::models::TransactionSummary,
     ) -> Self {
-        let reimbursed = if let Some(color) = &t.flag_color {
-            color == &ynab_api::models::transaction_summary::FlagColor::Green
+        let reimbursed = if let Some(Some(color)) = &t.flag_color {
+            color == &ynab_api::models::TransactionFlagColor::Green
         } else {
             false
         };
@@ -32,14 +32,14 @@ impl Transaction {
             id: t.id.clone(),
             date: t.date.clone(),
             amount: t.amount,
-            memo: t.memo.clone(),
-            cleared: clone_cleared(&t.cleared),
+            memo: t.memo.clone().flatten(),
+            cleared: t.cleared,
             approved: t.approved,
-            flag_color: t.flag_color.as_ref().map(clone_flag_color),
-            account_id: t.account_id.clone(),
-            payee_id: t.payee_id.clone(),
-            category_id: t.category_id.clone(),
-            import_id: t.import_id.clone(),
+            flag_color: t.flag_color.flatten(),
+            account_id: t.account_id,
+            payee_id: t.payee_id.flatten(),
+            category_id: t.category_id.flatten(),
+            import_id: t.import_id.clone().flatten(),
 
             account: None,
             payee: None,
@@ -53,8 +53,8 @@ impl Transaction {
         t: &ynab_api::models::TransactionSummary,
         st: &ynab_api::models::SubTransaction,
     ) -> Self {
-        let reimbursed = if let Some(color) = &t.flag_color {
-            color == &ynab_api::models::transaction_summary::FlagColor::Green
+        let reimbursed = if let Some(Some(color)) = &t.flag_color {
+            color == &ynab_api::models::TransactionFlagColor::Green
         } else {
             false
         };
@@ -62,15 +62,14 @@ impl Transaction {
             id: t.id.clone(),
             date: t.date.clone(),
             amount: st.amount,
-            memo: t.memo.clone(),
-            cleared: clone_cleared(&t.cleared),
+            memo: t.memo.clone().flatten(),
+            cleared: t.cleared,
             approved: t.approved,
-            flag_color: t.flag_color.as_ref().map(clone_flag_color),
-            account_id: t.account_id.clone(),
-            payee_id: t.payee_id.clone(),
-            category_id: t.category_id.clone(),
-            import_id: t.import_id.clone(),
-
+            flag_color: t.flag_color.flatten(),
+            account_id: t.account_id,
+            payee_id: t.payee_id.flatten(),
+            category_id: t.category_id.flatten(),
+            import_id: t.import_id.clone().flatten(),
             account: None,
             payee: None,
             total_amount: t.amount,
@@ -79,103 +78,22 @@ impl Transaction {
         }
     }
 
-    pub fn to_update_transaction(
+    pub fn to_save_transaction(
         &self,
-    ) -> ynab_api::models::UpdateTransaction {
-        let mut ut = ynab_api::models::UpdateTransaction::new(
-            self.id.clone(),
-            self.account_id.clone(),
-            self.date.clone(),
-            self.amount,
-        );
-        ut.payee_id = self.payee_id.clone();
-        ut.category_id = self.category_id.clone();
-        ut.memo = self.memo.clone();
-        ut.cleared = Some(cleared_to_cleared(&self.cleared));
-        ut.approved = Some(self.approved);
-        ut.flag_color =
-            self.flag_color.as_ref().map(flag_color_to_flag_color);
-        ut.import_id = self.import_id.clone();
+    ) -> ynab_api::models::SaveTransactionWithIdOrImportId {
+        let mut st = ynab_api::models::SaveTransactionWithIdOrImportId::new();
+        st.id = Some(Some(self.id.clone()));
+        st.account_id = Some(self.account_id);
+        st.date = Some(self.date.clone());
+        st.amount = Some(self.amount);
+        st.payee_id = Some(self.payee_id);
+        st.category_id = Some(self.category_id);
+        st.memo = Some(self.memo.clone());
+        st.cleared = Some(self.cleared);
+        st.approved = Some(self.approved);
+        st.flag_color = Some(self.flag_color);
+        st.import_id = Some(self.import_id.clone());
 
-        ut
-    }
-}
-
-impl Clone for Transaction {
-    fn clone(&self) -> Self {
-        Self {
-            id: self.id.clone(),
-            date: self.date.clone(),
-            amount: self.amount,
-            memo: self.memo.clone(),
-            cleared: clone_cleared(&self.cleared),
-            approved: self.approved,
-            flag_color: self.flag_color.as_ref().map(clone_flag_color),
-            account_id: self.account_id.clone(),
-            payee_id: self.payee_id.clone(),
-            category_id: self.category_id.clone(),
-            import_id: self.import_id.clone(),
-            account: self.account.clone(),
-            payee: self.payee.clone(),
-            total_amount: self.total_amount,
-            reimbursed: self.reimbursed,
-            selected: self.selected,
-        }
-    }
-}
-
-fn cleared_to_cleared(
-    cleared: &ynab_api::models::transaction_summary::Cleared,
-) -> ynab_api::models::update_transaction::Cleared {
-    use ynab_api::models::transaction_summary::Cleared as TSCleared;
-    use ynab_api::models::update_transaction::Cleared as UTCleared;
-
-    match cleared {
-        TSCleared::Cleared => UTCleared::Cleared,
-        TSCleared::Uncleared => UTCleared::Uncleared,
-        TSCleared::Reconciled => UTCleared::Reconciled,
-    }
-}
-
-fn flag_color_to_flag_color(
-    flag_color: &ynab_api::models::transaction_summary::FlagColor,
-) -> ynab_api::models::update_transaction::FlagColor {
-    use ynab_api::models::transaction_summary::FlagColor as TSFlagColor;
-    use ynab_api::models::update_transaction::FlagColor as UTFlagColor;
-
-    match flag_color {
-        TSFlagColor::Red => UTFlagColor::Red,
-        TSFlagColor::Orange => UTFlagColor::Orange,
-        TSFlagColor::Yellow => UTFlagColor::Yellow,
-        TSFlagColor::Green => UTFlagColor::Green,
-        TSFlagColor::Blue => UTFlagColor::Blue,
-        TSFlagColor::Purple => UTFlagColor::Purple,
-    }
-}
-
-fn clone_cleared(
-    cleared: &ynab_api::models::transaction_summary::Cleared,
-) -> ynab_api::models::transaction_summary::Cleared {
-    use ynab_api::models::transaction_summary::Cleared as TSCleared;
-
-    match cleared {
-        TSCleared::Cleared => TSCleared::Cleared,
-        TSCleared::Uncleared => TSCleared::Uncleared,
-        TSCleared::Reconciled => TSCleared::Reconciled,
-    }
-}
-
-fn clone_flag_color(
-    flag_color: &ynab_api::models::transaction_summary::FlagColor,
-) -> ynab_api::models::transaction_summary::FlagColor {
-    use ynab_api::models::transaction_summary::FlagColor as TSFlagColor;
-
-    match flag_color {
-        TSFlagColor::Red => TSFlagColor::Red,
-        TSFlagColor::Orange => TSFlagColor::Orange,
-        TSFlagColor::Yellow => TSFlagColor::Yellow,
-        TSFlagColor::Green => TSFlagColor::Green,
-        TSFlagColor::Blue => TSFlagColor::Blue,
-        TSFlagColor::Purple => TSFlagColor::Purple,
+        st
     }
 }

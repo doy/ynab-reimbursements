@@ -1,4 +1,4 @@
-use cursive::view::{Identifiable, View, ViewWrapper};
+use cursive::view::{Nameable, View, ViewWrapper};
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub enum TxnColumn {
@@ -118,12 +118,8 @@ impl cursive_table_view::TableViewItem<TxnColumn>
                 }
             }
             TxnColumn::Date => self.date.clone(),
-            TxnColumn::Account => {
-                self.account.clone().unwrap_or_else(|| "".to_string())
-            }
-            TxnColumn::Payee => {
-                self.payee.clone().unwrap_or_else(|| "".to_string())
-            }
+            TxnColumn::Account => self.account.clone().unwrap_or_default(),
+            TxnColumn::Payee => self.payee.clone().unwrap_or_default(),
             TxnColumn::Amount => crate::ynab::format_amount(self.amount),
             TxnColumn::TotalAmount => {
                 if self.amount == self.total_amount {

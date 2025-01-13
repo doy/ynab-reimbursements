@@ -1,4 +1,4 @@
-use cursive::view::{Identifiable, View};
+use cursive::view::{Nameable, View};
 
 const SELECTED_TOTAL_ID: &str = "selected_total";
 const INFLOWS_TABLE_ID: &str = "inflows_table";
@@ -38,12 +38,17 @@ impl TxnTables {
             inflows_table.len(),
             if inflows_table.len() == 1 { ") " } else { "s)" }
         )));
-        layout.add_child(cursive::views::CircularFocus::wrap_arrows(
-            cursive::views::ResizedView::with_min_height(
-                std::cmp::min(std::cmp::max(inflows_table.len(), 1), 5) + 2,
-                cursive::views::ResizedView::with_full_width(inflows_table),
-            ),
-        ));
+        layout.add_child(
+            cursive::views::CircularFocus::new(
+                cursive::views::ResizedView::with_min_height(
+                    inflows_table.len().clamp(1, 5) + 2,
+                    cursive::views::ResizedView::with_full_width(
+                        inflows_table,
+                    ),
+                ),
+            )
+            .wrap_arrows(),
+        );
 
         layout.add_child(cursive::views::TextView::new(" "));
 
@@ -65,9 +70,12 @@ impl TxnTables {
                 "s)"
             }
         )));
-        layout.add_child(cursive::views::CircularFocus::wrap_arrows(
-            cursive::views::ResizedView::with_full_screen(outflows_table),
-        ));
+        layout.add_child(
+            cursive::views::CircularFocus::new(
+                cursive::views::ResizedView::with_full_screen(outflows_table),
+            )
+            .wrap_arrows(),
+        );
 
         let event_view = cursive::views::OnEventView::new(layout)
             .on_event(cursive::event::Key::F0, move |s| {
@@ -134,12 +142,11 @@ fn submit(s: &mut cursive::Cursive) {
                     super::txn_table::TxnTableView,
                 >| {
                     let v = v.get_inner_mut();
-                    let all_txns = v.borrow_items_mut();
                     for id in txns.iter().map(|t| t.id.clone()) {
                         if let Some(idx) =
-                            all_txns.iter().position(|t| t.id == id)
+                            v.borrow_items().iter().position(|t| t.id == id)
                         {
-                            all_txns.remove(idx);
+                            v.remove_item(idx);
                         }
                     }
                     if let Some(row) = v.row() {
@@ -156,12 +163,11 @@ fn submit(s: &mut cursive::Cursive) {
                     super::txn_table::TxnTableView,
                 >| {
                     let v = v.get_inner_mut();
-                    let all_txns = v.borrow_items_mut();
                     for id in txns.iter().map(|t| t.id.clone()) {
                         if let Some(idx) =
-                            all_txns.iter().position(|t| t.id == id)
+                            v.borrow_items().iter().position(|t| t.id == id)
                         {
-                            all_txns.remove(idx);
+                            v.remove_item(idx);
                         }
                     }
                     if let Some(row) = v.row() {
@@ -210,7 +216,7 @@ fn refresh(s: &mut cursive::Cursive) {
             let row = v
                 .item()
                 .and_then(|idx| v.borrow_item(idx).map(|t| t.id.clone()));
-            for mut t in inflows.iter_mut() {
+            for t in inflows.iter_mut() {
                 if selected.contains(&t.id) {
                     t.selected = true;
                 }
@@ -247,7 +253,7 @@ fn refresh(s: &mut cursive::Cursive) {
             let row = v
                 .item()
                 .and_then(|idx| v.borrow_item(idx).map(|t| t.id.clone()));
-            for mut t in outflows.iter_mut() {
+            for t in outflows.iter_mut() {
                 if selected.contains(&t.id) {
                     t.selected = true;
                 }

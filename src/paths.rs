@@ -33,7 +33,7 @@ const PROJECT_NAME: &str = "ynab";
 
 pub fn api_key() -> Result<std::path::PathBuf> {
     Ok(directories::ProjectDirs::from("", "", PROJECT_NAME)
-        .with_context(|| FindConfigDir {
+        .with_context(|| FindConfigDirSnafu {
             name: PROJECT_NAME.to_string(),
         })?
         .config_dir()
@@ -44,11 +44,11 @@ pub fn read_api_key() -> Result<String> {
     let mut key = String::new();
     let key_file = api_key()?;
     std::fs::File::open(key_file.clone())
-        .with_context(|| OpenFile {
+        .with_context(|_| OpenFileSnafu {
             file: key_file.clone(),
         })?
         .read_to_string(&mut key)
-        .with_context(|| ReadFile {
+        .with_context(|_| ReadFileSnafu {
             file: key_file.clone(),
         })?;
     let key = key.trim();

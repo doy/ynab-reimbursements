@@ -15,45 +15,51 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct Client {
-    api: ynab_api::apis::client::APIClient,
+    configuration: ynab_api::apis::configuration::Configuration,
+    rt: tokio::runtime::Runtime,
 }
 
 impl Client {
     pub fn new(key: &str) -> Self {
-        let mut ynab_config =
+        let mut configuration =
             ynab_api::apis::configuration::Configuration::new();
-        ynab_config.api_key = Some(ynab_api::apis::configuration::ApiKey {
-            prefix: Some("Bearer".to_string()),
-            key: key.to_string(),
-        });
+        configuration.bearer_access_token = Some(key.to_string());
         Self {
-            api: ynab_api::apis::client::APIClient::new(ynab_config),
+            configuration,
+            rt: tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap(),
         }
     }
 
     pub fn default_budget(&self) -> Result<ynab_api::models::BudgetDetail> {
         let budget_id = self
-            .api
-            .budgets_api()
-            .get_budgets()
+            .rt
+            .block_on(ynab_api::apis::budgets_api::get_budgets(
+                &self.configuration,
+                None,
+            ))
             .map_err(|e| Error::GetBudgets {
                 source_msg: format!("{:?}", e),
             })?
             .data
             .budgets
-            .iter()
-            .next()
+            .first()
             .ok_or_else(|| Error::GetBudgets {
                 source_msg: "no budgets found".to_string(),
             })?
             .id
-            .clone();
-        Ok(self
-            .api
-            .budgets_api()
-            .get_budget_by_id(&budget_id, None)
+            .to_string();
+        Ok(*self
+            .rt
+            .block_on(ynab_api::apis::budgets_api::get_budget_by_id(
+                &self.configuration,
+                &budget_id,
+                None,
+            ))
             .map_err(|e| Error::GetBudgetById {
-                id: budget_id.clone(),
+                id: budget_id,
                 source_msg: format!("{:?}", e),
             })?
             .data
@@ -63,11 +69,14 @@ impl Client {
     pub fn update_transactions(
         &self,
         budget_id: &str,
-        transactions: ynab_api::models::UpdateTransactionsWrapper,
+        transactions: ynab_api::models::PatchTransactionsWrapper,
     ) -> Result<()> {
-        self.api
-            .transactions_api()
-            .update_transactions(budget_id, transactions)
+        self.rt
+            .block_on(ynab_api::apis::transactions_api::update_transactions(
+                &self.configuration,
+                budget_id,
+                transactions,
+            ))
             .map(|_| ())
             .map_err(|e| Error::UpdateTransactions {
                 source_msg: format!("{:?}", e),

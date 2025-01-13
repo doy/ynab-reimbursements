@@ -17,8 +17,8 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 fn run() -> Result<()> {
-    let key = paths::read_api_key().context(GetApiKey)?;
-    let budget = ynab::Budget::new(&key).context(LoadBudget)?;
+    let key = paths::read_api_key().context(GetApiKeySnafu)?;
+    let budget = ynab::Budget::new(&key).context(LoadBudgetSnafu)?;
 
     let mut app = app::App::new(budget);
     app.run();
